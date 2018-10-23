@@ -1,5 +1,6 @@
 import Checkout._
-import akka.actor.{Actor, Timers}
+import Main.{Item, system}
+import akka.actor.{Actor, ActorRef, Props, Timers}
 import akka.event.{Logging, LoggingReceive}
 
 import scala.collection.mutable
@@ -13,7 +14,6 @@ object Cart {
   case class AddItem[T](item: T) extends Command
 
   case class RemoveItem[T](item: T) extends Command
-
 
 
   sealed trait Event
@@ -39,11 +39,10 @@ class Cart[T] extends Actor with Timers {
 
   import Cart._
 
-  val log = Logging(context.system, this)
-  val timeout = 500.millis
+  private val log = Logging(context.system, this)
+  private val timeout = 500.millis
 
-
-  val items = mutable.HashSet[T]()
+  private val items = mutable.HashSet[T]()
 
   private def handleUnknown(unknown: Any): Unit = log.warning("Unknown message Encountered: {}", unknown)
 
@@ -85,24 +84,36 @@ class Cart[T] extends Actor with Timers {
       if (items.nonEmpty)
         sender ! CheckoutStarted
       timers.cancel(TimerKey)
-      context become inCheckout
+      context become inCheckout(context.actorOf(Props[Checkout], "Checkout"))
 
     case TimeExceeded =>
       log.info("Cart time exceeded. Removing items from cart")
       items.clear()
-      context become inCheckout
+      context become empty
 
     case unknown => handleUnknown(unknown)
   }
 
-  def inCheckout: Receive = LoggingReceive {
+  def inCheckout(checkout: ActorRef): Receive = LoggingReceive {
     case CancelCheckout =>
-      sender ! CheckoutCanceled
+      checkout ! CancelCheckout
+
+    case CheckoutCanceled =>
       context become nonEmpty
 
     case CloseCheckout =>
       sender ! CheckoutClosed
       context become empty
+
+    case SelectDeliveryMethod(method) =>
+      checkout ! SelectDeliveryMethod(method)
+
+    case SelectPaymentMethod(method) =>
+      checkout ! SelectPaymentMethod(method)
+
+    case Payment(status) =>
+
+      checkout ! Payment(status)
 
     case unknown => handleUnknown(unknown)
 

@@ -1,4 +1,5 @@
 import Cart._
+import Checkout._
 import akka.actor.{ActorSystem, Props}
 
 import scala.collection.mutable
@@ -20,19 +21,22 @@ object Main extends App {
   val mainActor = system.actorOf(Props[Cart[Item]], "Cart")
 
 
-  val x  = mutable.HashSet[Int]()
-  x.add(1)
-  x.add(2)
-  x.add(1)
-
   mainActor ! AddItem(Item(1,"abc"))
   mainActor ! RemoveItem(Item(1,"abc"))
   mainActor ! AddItem(Item(1,"abc"))
   mainActor ! AddItem(Item(2,"abc"))
   mainActor ! AddItem(Item(1,"abd"))
-  Thread.sleep(2000)
+  Thread.sleep(3000)
   mainActor ! AddItem(Item(1,"abd"))
-  mainActor ! Checkout
+  mainActor ! StartCheckout
+  mainActor ! SelectDeliveryMethod(Train)
+  mainActor ! SelectPaymentMethod(PayPal)
+  mainActor ! Payment(true)
+  Thread.sleep(100)
+  mainActor ! AddItem(Item(1,"abd"))
+  mainActor ! StartCheckout
+  Thread.sleep(3000)
+
 
 
   Await.result(system.whenTerminated, Duration.Inf)
