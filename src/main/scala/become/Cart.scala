@@ -1,7 +1,8 @@
-import Checkout._
-import Main.{Item, system}
+package become
+
 import akka.actor.{Actor, ActorRef, Props, Timers}
 import akka.event.{Logging, LoggingReceive}
+import become.Checkout.{CancelCheckout, CheckoutCanceled, CloseCheckout, Payment, SelectDeliveryMethod, SelectPaymentMethod, StartCheckout, _}
 
 import scala.collection.mutable
 import scala.concurrent.duration._
@@ -84,10 +85,10 @@ class Cart[T] extends Actor with Timers {
       if (items.nonEmpty)
         sender ! CheckoutStarted
       timers.cancel(TimerKey)
-      context become inCheckout(context.actorOf(Props[Checkout], "Checkout"))
+      context become inCheckout(context.actorOf(Props[Checkout], "become.Checkout"))
 
     case TimeExceeded =>
-      log.info("Cart time exceeded. Removing items from cart")
+      log.info("become.Cart time exceeded. Removing items from cart")
       items.clear()
       context become empty
 
